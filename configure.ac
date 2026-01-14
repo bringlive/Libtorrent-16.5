@@ -1,0 +1,122 @@
+AC_INIT([[libtorrent]],[[0.16.5]],[[sundell.software@gmail.com]])
+
+AC_CONFIG_HEADERS([config.h])
+AC_CONFIG_MACRO_DIRS([scripts])
+AM_INIT_AUTOMAKE([serial-tests subdir-objects foreign])
+
+LT_INIT([[disable-static]])
+
+AC_DEFINE([[PEER_NAME]], [["-lt1005-"]], [[Identifier that is part of the default peer id.]])
+AC_DEFINE([[PEER_VERSION]], [["lt\x10\x05"]], [[4 byte client and version identifier for DHT.]])
+
+LIBTORRENT_CURRENT=35
+LIBTORRENT_REVISION=0
+LIBTORRENT_AGE=0
+
+LIBTORRENT_INTERFACE_VERSION_INFO=$LIBTORRENT_CURRENT:$LIBTORRENT_REVISION:$LIBTORRENT_AGE
+LIBTORRENT_INTERFACE_VERSION_NO=$LIBTORRENT_CURRENT.$LIBTORRENT_AGE.$LIBTORRENT_REVISION
+
+AC_SUBST(LIBTORRENT_CURRENT)
+AC_SUBST(LIBTORRENT_INTERFACE_VERSION_INFO)
+AC_SUBST(LIBTORRENT_INTERFACE_VERSION_NO)
+
+AC_PROG_CXX
+
+# Filter out unwanted flags added by autoconf on some systems, e.g. MacOS.
+TORRENT_REMOVE_UNWANTED(CXX, $CXX, -std=c++11 -std=gnu++11)
+
+AX_CXX_COMPILE_STDCXX(17, noext, mandatory)
+
+AC_SYS_LARGEFILE
+
+AC_C_BIGENDIAN(
+  AC_DEFINE(IS_BIG_ENDIAN, 1, Big endian),
+  AC_DEFINE(IS_LITTLE_ENDIAN, 1, Little endian),
+  AC_MSG_ERROR([Could not determine endianness])
+)
+
+RAK_CHECK_CFLAGS
+RAK_CHECK_CXXFLAGS
+RAK_ENABLE_DEBUG
+RAK_ENABLE_EXTRA_DEBUG
+RAK_ENABLE_WERROR
+
+TORRENT_ENABLE_ALIGNED
+TORRENT_ENABLE_INTERRUPT_SOCKET
+
+TORRENT_ENABLE_ARCH
+TORRENT_WITH_SYSROOT
+
+dnl TORRENT_WITH_XFS
+TORRENT_WITHOUT_KQUEUE
+TORRENT_WITHOUT_EPOLL
+TORRENT_CHECK_FALLOCATE
+TORRENT_WITH_POSIX_FALLOCATE
+TORRENT_WITH_ADDRESS_SPACE
+
+TORRENT_WITHOUT_STATVFS
+TORRENT_WITHOUT_STATFS
+TORRENT_WITH_INOTIFY
+
+AC_ARG_ENABLE(attribute-visibility,
+  AS_HELP_STRING([--disable-attribute-visibility],[disable symbol visibility attribute [[default=enable]]]),
+  [
+    if test "$enableval" = "yes"; then
+      CC_ATTRIBUTE_VISIBILITY
+    fi
+  ],[
+    CC_ATTRIBUTE_VISIBILITY
+  ])
+
+AC_ARG_ENABLE(execinfo,
+  AS_HELP_STRING([--disable-execinfo],[disable libexecinfo [[default=enable]]]),
+  [
+    if test "$enableval" = "yes"; then
+      AX_EXECINFO
+    fi
+  ],[
+    AX_EXECINFO
+  ])
+
+if test "x$use_kqueue" != "xyes" && test "x$use_epoll" != "xyes"; then
+  AC_MSG_ERROR([Must enable at least one of either kqueue or epoll])
+fi
+
+AX_PTHREAD
+CHECK_ATOMIC
+
+PKG_CHECK_MODULES([LIBCURL], [libcurl],, [LIBCURL_CHECK_CONFIG])
+PKG_CHECK_MODULES([CPPUNIT], [cppunit],, [no_cppunit="yes"])
+PKG_CHECK_MODULES([ZLIB], [zlib])
+
+CFLAGS="$LIBCURL_CFLAGS $PTHREAD_CFLAGS $ZLIB_CFLAGS $CFLAGS"
+CXXFLAGS="$LIBCURL_CFLAGS $LIBCURL_CPPFLAGS $PTHREAD_CFLAGS $ZLIB_CFLAGS $CXXFLAGS"
+LIBS="$LIBCURL_LIBS $ATOMIC_LIBS $PTHREAD_LIBS $ZLIB_LIBS $LIBS"
+
+TORRENT_CHECK_OPENSSL
+TORRENT_CHECK_CACHELINE
+TORRENT_CHECK_POPCOUNT
+TORRENT_CHECK_MADVISE
+TORRENT_CHECK_POSIX_FADVISE
+TORRENT_DISABLE_PTHREAD_SETNAME_NP
+TORRENT_MINCORE
+
+TORRENT_DISABLE_INSTRUMENTATION
+
+LIBTORRENT_LIBS="-ltorrent"
+AC_SUBST(LIBTORRENT_LIBS)
+
+LIBTORRENT_CFLAGS=""
+AC_SUBST(LIBTORRENT_CFLAGS)
+
+AC_DEFINE(HAVE_CONFIG_H, 1, true if config.h was included)
+
+AC_CONFIG_FILES([
+    libtorrent.pc
+    Makefile
+    src/Makefile
+    src/torrent/Makefile
+    test/Makefile
+])
+
+AC_OUTPUT
